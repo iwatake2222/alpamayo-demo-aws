@@ -1,6 +1,10 @@
-# About
+# Simple demo to run Alpamayo on AWS EC2 (g5.4xlarge instance)
 
-Simple demo to run Alpamayo on AWS EC2 (g5.4xlarge instance)
+<img width="840" height="384" alt="output" src="https://github.com/user-attachments/assets/fe230348-a11d-4e12-8d9d-30f25f909586" />
+
+![output_conv mp4_snapshot_00 07 756](https://github.com/user-attachments/assets/70c5e92e-bf16-401a-9fd8-b7ecf589e22c)
+
+https://github.com/user-attachments/assets/eabff334-1309-4ed4-aef0-9be188fc003b
 
 - demo_01_example_clip.py
   - A simple demo based on the original test_inference.py
