@@ -31,7 +31,7 @@ from alpamayo_r1 import helper
 
 from utility import (
     put_text_with_bg,
-    draw_trajectories,
+    draw_trajectory,
     draw_trajectory_projected,
     load_images_opencv,
     opencv_images_to_torch,
@@ -65,7 +65,8 @@ if not ret:
 
 out_path = "output.mp4"
 fps = 30
-input_w, input_h = frame.shape[1] + WIDTH_TRAJECTORY_WINDOW_PX, frame.shape[0]
+# input_w, input_h = frame.shape[1] + WIDTH_TRAJECTORY_WINDOW_PX, frame.shape[0]
+input_w, input_h = 1920//2 + WIDTH_TRAJECTORY_WINDOW_PX, 1080//2
 writer = cv2.VideoWriter(
     out_path,
     cv2.VideoWriter_fourcc(*"mp4v"),
@@ -74,7 +75,7 @@ writer = cv2.VideoWriter(
 )
 
 
-cap.set(cv2.CAP_PROP_POS_FRAMES, 5000)  # skip first few frames
+cap.set(cv2.CAP_PROP_POS_FRAMES, 100)  # skip first few frames
 frame_buffer = deque(maxlen=MODEL_INPUT_NUM_FRAMES)
 frame_id = 0
 while True:
@@ -84,7 +85,7 @@ while True:
         break
 
     frame_id += 1
-    if frame_id == 10 * 1000:
+    if frame_id >= 10000:
         break
 
     if frame_id % 10 != 0:
@@ -93,15 +94,16 @@ while True:
 
     frame_buffer.append(frame)
     current_input_image = frame.copy()
+    current_input_image = cv2.resize(current_input_image, (1920//2, 1080//2))
 
     print("Preparing input...")
     input_images = opencv_images_to_torch(list(frame_buffer))
-    input_images = torch.nn.functional.interpolate(
-        input_images,
-        size=(MODEL_INPUT_HEIGHT, MODEL_INPUT_WIDTH),
-        mode="bilinear",
-        align_corners=False,
-    )
+    # input_images = torch.nn.functional.interpolate(
+    #     input_images,
+    #     size=(MODEL_INPUT_HEIGHT, MODEL_INPUT_WIDTH),
+    #     mode="bilinear",
+    #     align_corners=False,
+    # )
 
     messages = helper.create_message(input_images)
     inputs = processor.apply_chat_template(
@@ -120,7 +122,7 @@ while True:
     model_inputs = helper.to_device(model_inputs, "cuda")
 
     print("Running inference...")
-    # torch.cuda.manual_seed_all(42)
+    torch.cuda.manual_seed_all(42)
     start = time.time()
     with torch.autocast("cuda", dtype=torch.bfloat16):
         pred_xyz, pred_rot, extra = model.sample_trajectories_from_data_with_vlm_rollout(
@@ -149,7 +151,7 @@ while True:
         traj_y.append(y)
 
     print("Drawing trajectory...")
-    img_trajectories = draw_trajectories(
+    img_trajectory = draw_trajectory(
         traj_x,
         traj_y,
         world_width_m=10.0,
@@ -158,20 +160,20 @@ while True:
         # image_height_px=400
         image_height_px=current_input_image.shape[0]
     )
-    # cv2.imwrite("trajectories.png", img_trajectories)
+    # cv2.imwrite("trajectory.png", img_trajectory)
 
     print("Projecting trajectory onto input image...")
     img_trajectory_projected = draw_trajectory_projected(
         img=current_input_image,
         traj_x=traj_x,
         traj_y=traj_y,
-        fx=300.0,
-        fy=300.0,
+        fx=1000.0,
+        fy=1000.0,
         camera_height_m=1.5,
-        camera_pitch_deg=6.0,
+        camera_pitch_deg=0.0,
     )
 
-    img_output = cv2.hconcat([img_trajectory_projected, img_trajectories])
+    img_output = cv2.hconcat([img_trajectory_projected, img_trajectory])
 
     print("Saving output image...")
     put_text_with_bg(

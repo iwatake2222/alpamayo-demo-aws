@@ -30,7 +30,7 @@ from alpamayo_r1 import helper
 
 from utility import (
     put_text_with_bg,
-    draw_trajectories,
+    draw_trajectory,
     draw_trajectory_projected,
 )
 
@@ -67,18 +67,20 @@ input_images = input_images[-1:, :, :, :, :]
 input_images = input_images.flatten(0, 1)  # [CAM x FRAME, C, H, W]
 
 # Resize to 384x640
-resized_input_images = torch.nn.functional.interpolate(
-    input_images,
-    size=(MODEL_INPUT_HEIGHT, MODEL_INPUT_WIDTH),
-    mode="bilinear",
-    align_corners=False,
-)
-messages = helper.create_message(resized_input_images)
+# resized_input_images = torch.nn.functional.interpolate(
+#     input_images,
+#     size=(MODEL_INPUT_HEIGHT, MODEL_INPUT_WIDTH),
+#     mode="bilinear",
+#     align_corners=False,
+# )
+# messages = helper.create_message(resized_input_images)
+messages = helper.create_message(input_images)
 
 ### Store current input image for later visualization
 current_input_image = input_images[-1 , :, :, :]
 current_input_image = current_input_image.permute(1, 2, 0).numpy()
 current_input_image = cv2.cvtColor(current_input_image, cv2.COLOR_RGB2BGR)
+current_input_image = cv2.resize(current_input_image, (1920//2, 1080//2))
 
 
 print("Loading Alpamayo model...")
@@ -103,7 +105,7 @@ model_inputs = {
 model_inputs = helper.to_device(model_inputs, "cuda")
 
 print("Running inference...")
-# torch.cuda.manual_seed_all(42)
+torch.cuda.manual_seed_all(42)
 start = time.time()
 with torch.autocast("cuda", dtype=torch.bfloat16):
     pred_xyz, pred_rot, extra = model.sample_trajectories_from_data_with_vlm_rollout(
@@ -132,7 +134,7 @@ for traj_i in range(pred_xy.shape[0]):
     traj_y.append(y)
 
 print("Drawing trajectory...")
-img_trajectories = draw_trajectories(
+img_trajectory = draw_trajectory(
     traj_x,
     traj_y,
     world_width_m=10.0,
@@ -141,17 +143,17 @@ img_trajectories = draw_trajectories(
     # image_height_px=400
     image_height_px=current_input_image.shape[0]
 )
-cv2.imwrite("trajectories.png", img_trajectories)
+cv2.imwrite("trajectory.png", img_trajectory)
 
 print("Projecting trajectory onto input image...")
 img_trajectory_projected = draw_trajectory_projected(
     img=current_input_image,
     traj_x=traj_x,
     traj_y=traj_y,
-    fx=300.0,
-    fy=300.0,
+    fx=1000.0,
+    fy=1000.0,
     camera_height_m=1.5,
-    camera_pitch_deg=6.0,
+    camera_pitch_deg=0.0,
 )
 
 print("Saving output image...")
@@ -162,5 +164,32 @@ put_text_with_bg(
 )
 cv2.imwrite(f"trajectory_projected.png", img_trajectory_projected)
 
-img_output = cv2.hconcat([img_trajectory_projected, img_trajectories])
+img_output = cv2.hconcat([img_trajectory_projected, img_trajectory])
 cv2.imwrite(f"output.png", img_output)
+
+# Evaluate the result visually using matplotlib
+import matplotlib.pyplot as plt
+def rotate_90cc(xy):
+    # Rotate (x, y) by 90 deg CCW -> (y, -x)
+    return np.stack([-xy[1], xy[0]], axis=0)
+
+plt.figure(figsize=(6, 6))
+
+for i in range(pred_xyz.shape[2]):
+    pred_xy = pred_xyz.cpu()[0, 0, i, :, :2].T.numpy()
+    pred_xy_rot = rotate_90cc(pred_xy)
+
+    gt_xy = data["ego_future_xyz"].cpu()[0, 0, :, :2].T.numpy()
+    gt_xy_rot = rotate_90cc(gt_xy)
+
+    plt.plot(*pred_xy_rot, "o-", label=f"Predicted Trajectory #{i + 1}")
+
+plt.plot(*gt_xy_rot, "r-", label="Ground Truth Trajectory")
+
+plt.xlabel("x coordinate (meters)")
+plt.ylabel("y coordinate (meters)")
+plt.legend(loc="best")
+plt.axis("equal")
+
+plt.savefig("trajectory_eval.png", dpi=200, bbox_inches="tight")
+plt.close()

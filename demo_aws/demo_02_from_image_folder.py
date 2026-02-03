@@ -30,7 +30,7 @@ from alpamayo_r1 import helper
 
 from utility import (
     put_text_with_bg,
-    draw_trajectories,
+    draw_trajectory,
     draw_trajectory_projected,
     load_images_opencv,
     opencv_images_to_torch,
@@ -48,13 +48,14 @@ input_images_cv = load_images_opencv("demo_aws/sample_images/go/")
 input_images = opencv_images_to_torch(input_images_cv)
 
 # Resize to 384x640
-resized_input_images = torch.nn.functional.interpolate(
-    input_images,
-    size=(MODEL_INPUT_HEIGHT, MODEL_INPUT_WIDTH),
-    mode="bilinear",
-    align_corners=False,
-)
-messages = helper.create_message(resized_input_images)
+# resized_input_images = torch.nn.functional.interpolate(
+#     input_images,
+#     size=(MODEL_INPUT_HEIGHT, MODEL_INPUT_WIDTH),
+#     mode="bilinear",
+#     align_corners=False,
+# )
+# messages = helper.create_message(resized_input_images)
+messages = helper.create_message(input_images)
 
 # Read dummty ego history
 ego_history_xyz, ego_history_rot = create_dummy_ego_history()
@@ -63,6 +64,7 @@ ego_history_xyz, ego_history_rot = create_dummy_ego_history()
 current_input_image = input_images[-1 , :, :, :]
 current_input_image = current_input_image.permute(1, 2, 0).numpy()
 current_input_image = cv2.cvtColor(current_input_image, cv2.COLOR_RGB2BGR)
+current_input_image = cv2.resize(current_input_image, (1920//2, 1080//2))
 
 
 print("Loading Alpamayo model...")
@@ -87,7 +89,7 @@ model_inputs = {
 model_inputs = helper.to_device(model_inputs, "cuda")
 
 print("Running inference...")
-# torch.cuda.manual_seed_all(42)
+torch.cuda.manual_seed_all(42)
 start = time.time()
 with torch.autocast("cuda", dtype=torch.bfloat16):
     pred_xyz, pred_rot, extra = model.sample_trajectories_from_data_with_vlm_rollout(
@@ -116,7 +118,7 @@ for traj_i in range(pred_xy.shape[0]):
     traj_y.append(y)
 
 print("Drawing trajectory...")
-img_trajectories = draw_trajectories(
+img_trajectory = draw_trajectory(
     traj_x,
     traj_y,
     world_width_m=10.0,
@@ -125,17 +127,17 @@ img_trajectories = draw_trajectories(
     # image_height_px=400
     image_height_px=current_input_image.shape[0]
 )
-cv2.imwrite("trajectories.png", img_trajectories)
+cv2.imwrite("trajectory.png", img_trajectory)
 
 print("Projecting trajectory onto input image...")
 img_trajectory_projected = draw_trajectory_projected(
     img=current_input_image,
     traj_x=traj_x,
     traj_y=traj_y,
-    fx=300.0,
-    fy=300.0,
+    fx=1000.0,
+    fy=1000.0,
     camera_height_m=1.5,
-    camera_pitch_deg=6.0,
+    camera_pitch_deg=0.0,
 )
 
 print("Saving output image...")
@@ -146,5 +148,5 @@ put_text_with_bg(
 )
 cv2.imwrite(f"trajectory_projected.png", img_trajectory_projected)
 
-img_output = cv2.hconcat([img_trajectory_projected, img_trajectories])
+img_output = cv2.hconcat([img_trajectory_projected, img_trajectory])
 cv2.imwrite(f"output.png", img_output)

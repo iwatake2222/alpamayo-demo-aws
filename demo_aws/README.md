@@ -1,10 +1,10 @@
-# Simple demo to run Alpamayo on AWS EC2 (g5.4xlarge instance)
+# Simple demo to run Alpamayo on AWS EC2
 
-<img width="840" height="384" alt="output" src="https://github.com/user-attachments/assets/fe230348-a11d-4e12-8d9d-30f25f909586" />
+<img width="1160" height="540" alt="output" src="https://github.com/user-attachments/assets/3caaa728-1169-42ab-8131-41b44ba0b2cd" />
 
-![output_conv mp4_snapshot_00 07 756](https://github.com/user-attachments/assets/70c5e92e-bf16-401a-9fd8-b7ecf589e22c)
+![output_conv mp4_snapshot_00 04 540](https://github.com/user-attachments/assets/828cf610-7258-4059-ba21-261ed66aeee2)
 
-https://github.com/user-attachments/assets/96f964a5-de97-44c5-9f9c-714f4d080bf0
+https://github.com/user-attachments/assets/821a12af-d123-40c4-965d-88537f45f3a0
 
 
 - demo_01_example_clip.py
@@ -28,7 +28,7 @@ python3 demo_aws/demo_03_from_video.py
 ## Build EC2 Server
 
 ```bash
-cd aws
+cd demo_aws
 
 Region=ap-northeast-1
 # AvailabilityZone=ap-northeast-1a
@@ -36,7 +36,8 @@ Region=ap-northeast-1
 # InstanceType=t3.medium
 AvailabilityZone=ap-northeast-1d
 ImageId=ami-0e7d0c8815f409923   # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.9 (Ubuntu 24.04)
-InstanceType=g5.4xlarge
+InstanceType=g6.2xlarge
+# InstanceType=p5.4xlarge
 RootVolumeSize=256
 
 SystemName=test-alpamayo
@@ -83,9 +84,31 @@ ssh ec2-user@i-00000000000000000
 ssh test-ec2-server
 ```
 
+## Setup
+
+```bash
+sudo apt update
+sudo apt install -y python3-pip
+sudo apt install -y nvidia-cuda-toolkit
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+
+git clone https://github.com/iwatake2222/alpamayo-demo-aws.git
+cd alpamayo-demo-aws
+uv venv ar1_venv
+source ar1_venv/bin/activate
+uv sync --active
+
+pip install huggingface_hub --break-system-packages
+huggingface-cli login
+
+python3 demo_aws/demo_01_example_clip.py
+```
+
 # Acknowledgements
 - Drive Video by Dashcam Roadshow
-- 4K東京ドライブ：晴海→東京駅→スカイツリー 11km 
+- 4K Tokyo Scenic Drive: Bayside to Tokyo Station and Skytree 11km
   - https://www.youtube.com/watch?v=ZZjDfYQQb0c
-- 4K 東京ドライブ  豊洲→渋谷→品川→秋葉原
+- Tokyo Drive 4K | Toyosu - Shibuya - Shinagawa - Akihabara
   - https://www.youtube.com/watch?v=exouyX15boM

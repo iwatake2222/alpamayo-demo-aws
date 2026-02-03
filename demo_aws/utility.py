@@ -11,11 +11,11 @@ def put_text_with_bg(
     position: Tuple[int, int],
     *,
     font: int = cv2.FONT_HERSHEY_SIMPLEX,
-    font_scale: float = 0.6,
+    font_scale: float = 1.0,
     text_color: Tuple[int, int, int] = (0, 255, 0),
     bg_color: Tuple[int, int, int] = (0, 0, 0),
-    thickness: int = 1,
-    bg_thickness_ratio: int = 2,
+    thickness: int = 2,
+    bg_thickness_ratio: int = 3,
 ) -> None:
     """
     Draw text with a background (outline) on an image.
@@ -49,7 +49,7 @@ def put_text_with_bg(
         )
 
 
-def draw_trajectories(
+def draw_trajectory(
     traj_x: Iterable[np.ndarray],
     traj_y: Iterable[np.ndarray],
     *,
@@ -113,8 +113,8 @@ def draw_trajectories(
         )
 
         # Optional: draw points instead of lines
-        # for p in pts:
-        #     cv2.circle(img, tuple(p), 2, (0, 0, 255), -1)
+        for p in pts:
+            cv2.circle(img, tuple(p), 2, (0, 0, 255), -1)
 
     return img
 
@@ -272,9 +272,12 @@ def draw_trajectory_projected(
             p2 = tuple(pts_img[i + 1].astype(int))
 
             color = depth_to_color(
-                depth_m=y_m[i],
-                min_depth_m=y_min,
-                max_depth_m=y_max,
+                # depth_m=y_m[i],
+                # min_depth_m=y_min,
+                # max_depth_m=y_max,
+                depth_m=i,
+                min_depth_m=0,
+                max_depth_m=len(pts_img),
             )
 
             cv2.line(
