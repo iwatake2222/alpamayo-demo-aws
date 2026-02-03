@@ -4,7 +4,8 @@
 
 ![output_conv mp4_snapshot_00 07 756](https://github.com/user-attachments/assets/70c5e92e-bf16-401a-9fd8-b7ecf589e22c)
 
-https://github.com/user-attachments/assets/eabff334-1309-4ed4-aef0-9be188fc003b
+https://github.com/user-attachments/assets/96f964a5-de97-44c5-9f9c-714f4d080bf0
+
 
 - demo_01_example_clip.py
   - A simple demo based on the original test_inference.py
